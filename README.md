@@ -221,6 +221,15 @@ If you use this implementation in your research, please cite the original ANP pa
 - Chart.js for visualization components
 - PostgreSQL community for robust database support
 
+## Lessons Learned
+
+- Train your own model so you can witness the mechanics of it, if you haven't experienced that already.
+- In the attacks tab, toggle between the ANP-trained model and the baseline model, redoing the attack with different parameters to see the success/failures.
+- Upload an image so you have a sense for what the filter does in reality.  
+- Remember that adversarial samples are meant to be imperceptible, but you get gist.
+- This is not mean to be an attack tool, you can't take the trained image and send to a Frontier model and (easily) fool it.
+
+
 ## 📞 Support
 
 For questions, issues, or contributions, please:
