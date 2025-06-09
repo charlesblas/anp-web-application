@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANP - Adversarial Noise Propagation</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Adversarial Noise Propagation (ANP)</h1>
+            <p class="subtitle">Training Robust Deep Neural Networks via Adversarial Noise Propagation</p>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-button active" onclick="showTab('overview')">Overview</button>
+            <button class="tab-button" onclick="showTab('training')">Training</button>
+            <button class="tab-button" onclick="showTab('evaluation')">Evaluation</button>
+            <button class="tab-button" onclick="showTab('attacks')">Attacks</button>
+            <button class="tab-button" onclick="showTab('metrics')">Metrics</button>
+        </nav>
+
+        <!-- Overview Tab -->
+        <div id="overview" class="tab-content active">
+            <div class="card">
+                <h2>What is ANP?</h2>
+                <p>Adversarial Noise Propagation (ANP) is a powerful training algorithm that improves the robustness of deep neural networks against various types of noise, including adversarial examples and corruption.</p>
+                
+                <div class="feature-grid">
+                    <div class="feature">
+                        <h3>Layer-wise Noise Injection</h3>
+                        <p>ANP injects adversarial noise into hidden layers during training, not just the input layer.</p>
+                    </div>
+                    <div class="feature">
+                        <h3>Progressive Training</h3>
+                        <p>Uses k-step gradient descent to compute and propagate adversarial noise through the network.</p>
+                    </div>
+                    <div class="feature">
+                        <h3>Shallow Layer Focus</h3>
+                        <p>Research shows shallow layers are more critical for robustness than deep layers.</p>
+                    </div>
+                    <div class="feature">
+                        <h3>Strong Robustness</h3>
+                        <p>Achieves state-of-the-art defense against both adversarial attacks and natural corruption.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Key Parameters</h2>
+                <table class="params-table">
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Description</th>
+                        <th>Default Value</th>
+                    </tr>
+                    <tr>
+                        <td>ε (epsilon)</td>
+                        <td>Noise magnitude constraint</td>
+                        <td>0.3</td>
+                    </tr>
+                    <tr>
+                        <td>η (eta)</td>
+                        <td>Previous noise contribution coefficient</td>
+                        <td>0.1</td>
+                    </tr>
+                    <tr>
+                        <td>k</td>
+                        <td>Number of gradient descent steps</td>
+                        <td>3</td>
+                    </tr>
+                    <tr>
+                        <td>Top Layers</td>
+                        <td>Number of shallow layers to perturb</td>
+                        <td>4</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Training Tab -->
+        <div id="training" class="tab-content">
+            <div class="card">
+                <h2>Model Training with ANP</h2>
+                
+                <div class="form-section">
+                    <h3>Model Configuration</h3>
+                    <form id="training-form">
+                        <div class="form-group">
+                            <label for="model-name">Model Name</label>
+                            <input type="text" id="model-name" name="modelName" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="model-type">Model Architecture</label>
+                            <select id="model-type" name="modelType">
+                                <option value="lenet">LeNet (MNIST)</option>
+                                <option value="vgg16">VGG-16 (CIFAR-10)</option>
+                                <option value="resnet18">ResNet-18 (CIFAR-10)</option>
+                                <option value="mobilenet">MobileNet</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="dataset">Dataset</label>
+                            <select id="dataset" name="dataset">
+                                <option value="mnist">MNIST</option>
+                                <option value="cifar10">CIFAR-10</option>
+                                <option value="custom">Custom Dataset</option>
+                            </select>
+                        </div>
+
+                        <h3>ANP Configuration</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="epsilon">Epsilon (ε)</label>
+                                <input type="number" id="epsilon" name="epsilon" min="0" max="1" step="0.1" value="0.3">
+                            </div>
+                            <div class="form-group">
+                                <label for="eta">Eta (η)</label>
+                                <input type="number" id="eta" name="eta" min="0" max="1" step="0.05" value="0.1">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="k-steps">K Steps</label>
+                                <input type="number" id="k-steps" name="kSteps" min="1" max="10" value="3">
+                            </div>
+                            <div class="form-group">
+                                <label for="top-layers">Top Layers</label>
+                                <input type="number" id="top-layers" name="topLayers" min="1" max="10" value="4">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="norm-type">Norm Type</label>
+                            <select id="norm-type" name="normType">
+                                <option value="inf">L∞ (Infinity)</option>
+                                <option value="2">L2</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Start Training</button>
+                    </form>
+                </div>
+
+                <div id="training-progress" class="hidden">
+                    <h3>Training Progress</h3>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <p id="progress-text">Epoch 0/0</p>
+
+                    <canvas id="training-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Evaluation Tab -->
+        <div id="evaluation" class="tab-content">
+            <div class="card">
+                <h2>Model Evaluation</h2>
+                
+                <div class="form-section">
+                    <h3>Select Model</h3>
+                    <select id="eval-model-select" class="form-control">
+                        <option value="">Select a trained model...</option>
+                    </select>
+
+                    <h3>Evaluation Type</h3>
+                    <div class="eval-options">
+                        <label>
+                            <input type="checkbox" name="evalType" value="clean" checked>
+                            Clean Accuracy
+                        </label>
+                        <label>
+                            <input type="checkbox" name="evalType" value="adversarial" checked>
+                            Adversarial Robustness
+                        </label>
+                        <label>
+                            <input type="checkbox" name="evalType" value="corruption" checked>
+                            Corruption Robustness
+                        </label>
+                        <label>
+                            <input type="checkbox" name="evalType" value="structural">
+                            Structural Robustness
+                        </label>
+                    </div>
+
+                    <button onclick="runEvaluation()" class="btn btn-primary">Run Evaluation</button>
+                </div>
+
+                <div id="evaluation-results" class="hidden">
+                    <h3>Evaluation Results</h3>
+                    <div class="results-grid">
+                        <div class="result-card">
+                            <h4>Clean Accuracy</h4>
+                            <p class="result-value" id="clean-accuracy">--</p>
+                        </div>
+                        <div class="result-card">
+                            <h4>FGSM Robustness</h4>
+                            <p class="result-value" id="fgsm-accuracy">--</p>
+                        </div>
+                        <div class="result-card">
+                            <h4>PGD Robustness</h4>
+                            <p class="result-value" id="pgd-accuracy">--</p>
+                        </div>
+                        <div class="result-card">
+                            <h4>Corruption mCE</h4>
+                            <p class="result-value" id="corruption-mce">--</p>
+                        </div>
+                    </div>
+
+                    <canvas id="robustness-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Attacks Tab -->
+        <div id="attacks" class="tab-content">
+            <div class="card">
+                <h2>Adversarial Attack Testing</h2>
+                <div class="info-box">
+                    <h4>🛡️ About ANP (Adversarial Noise Propagation)</h4>
+                    <p><strong>ANP is a defense technique</strong>, not an attack method. It trains models to be robust against adversarial attacks by injecting noise into hidden layers during training. Test how ANP-defended models perform against various attack methods below.</p>
+                </div>
+                
+                <div class="attack-interface">
+                    <div class="attack-controls">
+                        <h3>Image Upload</h3>
+                        <div class="form-group">
+                            <label for="image-upload">Upload Image</label>
+                            <input type="file" id="image-upload" accept="image/*" onchange="handleImageUpload(event)">
+                            <small>Supported: JPG, PNG, GIF (will be resized to model input size)</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="dataset-type">Dataset Type</label>
+                            <select id="dataset-type" onchange="updateTargetClasses()">
+                                <option value="cifar10">CIFAR-10 (32x32)</option>
+                                <option value="mnist">MNIST (28x28)</option>
+                                <option value="imagenet">ImageNet (224x224)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="target-class">Target Class</label>
+                            <select id="target-class">
+                                <!-- Options will be populated based on dataset -->
+                            </select>
+                            <small>Class to fool the model into predicting</small>
+                        </div>
+
+                        <h3>Attack Configuration</h3>
+                        <div class="form-group">
+                            <label for="target-model">Target Model</label>
+                            <select id="target-model">
+                                <option value="anp">ANP-Trained Model (Robust Defense)</option>
+                                <option value="standard">Standard-Trained Model (Baseline)</option>
+                                <option value="other">Other Defense Method</option>
+                            </select>
+                            <small>Select which model to attack - ANP models should be more robust</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="attack-method">Attack Method</label>
+                            <select id="attack-method">
+                                <option value="fgsm">FGSM (Fast Gradient Sign Method)</option>
+                                <option value="bim">BIM (Basic Iterative Method)</option>
+                                <option value="pgd">PGD (Projected Gradient Descent)</option>
+                                <option value="mifgsm">MI-FGSM (Momentum Iterative)</option>
+                                <option value="cw">C&W (Carlini & Wagner)</option>
+                            </select>
+                            <small>Adversarial attack to test model robustness</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="attack-epsilon">Epsilon (Perturbation Budget)</label>
+                            <input type="range" id="attack-epsilon" min="0" max="1" step="0.01" value="0.3">
+                            <span id="epsilon-value">0.3</span>
+                            <small>Maximum allowed perturbation magnitude</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="attack-iterations">Iterations</label>
+                            <input type="number" id="attack-iterations" min="1" max="100" value="10">
+                            <small>Number of iterations for iterative attacks</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="targeted-attack" checked onchange="toggleTargetedAttack()">
+                                Targeted Attack
+                            </label>
+                            <small>Target specific class vs. any misclassification</small>
+                        </div>
+
+                        <button onclick="generateAttack()" class="btn btn-danger" disabled id="generate-attack-btn">
+                            Upload Image First
+                        </button>
+                        
+                        <button onclick="loadSampleImage()" class="btn btn-secondary">
+                            Load Sample Image
+                        </button>
+                    </div>
+
+                    <div class="attack-visualization">
+                        <h3>Results</h3>
+                        <div class="attack-stats">
+                            <div class="stat-item">
+                                <label>Attack Success:</label>
+                                <span id="attack-success">--</span>
+                            </div>
+                            <div class="stat-item">
+                                <label>Confidence Drop:</label>
+                                <span id="confidence-drop">--</span>
+                            </div>
+                            <div class="stat-item">
+                                <label>L∞ Distance:</label>
+                                <span id="linf-distance">--</span>
+                            </div>
+                            <div class="stat-item">
+                                <label>L2 Distance:</label>
+                                <span id="l2-distance">--</span>
+                            </div>
+                        </div>
+
+                        <div class="image-grid">
+                            <div class="image-container">
+                                <h4>Original Image</h4>
+                                <canvas id="original-image"></canvas>
+                                <div class="prediction-info">
+                                    <p><strong>Prediction:</strong> <span id="original-pred">--</span></p>
+                                    <p><strong>Confidence:</strong> <span id="original-confidence">--</span></p>
+                                </div>
+                            </div>
+                            <div class="image-container">
+                                <h4>Perturbation</h4>
+                                <canvas id="perturbation-image"></canvas>
+                                <div class="prediction-info">
+                                    <p><strong>ε:</strong> <span id="perturbation-epsilon">--</span></p>
+                                    <p><strong>Method:</strong> <span id="perturbation-method">--</span></p>
+                                </div>
+                            </div>
+                            <div class="image-container">
+                                <h4>Adversarial Image</h4>
+                                <canvas id="adversarial-image"></canvas>
+                                <div class="prediction-info">
+                                    <p><strong>Prediction:</strong> <span id="adversarial-pred">--</span></p>
+                                    <p><strong>Confidence:</strong> <span id="adversarial-confidence">--</span></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="attack-details" id="attack-details" style="display: none;">
+                            <h4>Attack Details</h4>
+                            <div class="details-grid">
+                                <div class="detail-item">
+                                    <label>Target Class:</label>
+                                    <span id="detail-target">--</span>
+                                </div>
+                                <div class="detail-item">
+                                    <label>Iterations Used:</label>
+                                    <span id="detail-iterations">--</span>
+                                </div>
+                                <div class="detail-item">
+                                    <label>Time Taken:</label>
+                                    <span id="detail-time">--</span>
+                                </div>
+                                <div class="detail-item">
+                                    <label>Model Used:</label>
+                                    <span id="detail-model">--</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metrics Tab -->
+        <div id="metrics" class="tab-content">
+            <div class="card">
+                <h2>Robustness Metrics</h2>
+                
+                <div class="metrics-dashboard">
+                    <div class="metric-section">
+                        <h3>Model Comparison</h3>
+                        <div class="comparison-controls">
+                            <select id="model1-select" class="form-control">
+                                <option value="">Select Model 1...</option>
+                            </select>
+                            <span>vs</span>
+                            <select id="model2-select" class="form-control">
+                                <option value="">Select Model 2...</option>
+                            </select>
+                            <button onclick="compareModels()" class="btn btn-secondary">Compare</button>
+                        </div>
+                    </div>
+
+                    <div id="comparison-results" class="hidden">
+                        <canvas id="comparison-chart"></canvas>
+                        
+                        <div class="comparison-table">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Metric</th>
+                                        <th id="model1-name">Model 1</th>
+                                        <th id="model2-name">Model 2</th>
+                                        <th>Winner</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="comparison-tbody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="metric-section">
+                        <h3>Leaderboard</h3>
+                        <div class="leaderboard-controls">
+                            <select id="leaderboard-metric">
+                                <option value="accuracy">Accuracy</option>
+                                <option value="mce">mCE (lower is better)</option>
+                                <option value="mfr">mFR (lower is better)</option>
+                                <option value="boundary_distance">Boundary Distance</option>
+                            </select>
+                            <button onclick="loadLeaderboard()" class="btn btn-secondary">Refresh</button>
+                        </div>
+                        
+                        <table class="leaderboard-table">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Model</th>
+                                    <th>Type</th>
+                                    <th>Score</th>
+                                    <th>Tests</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leaderboard-tbody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+</body>
+</html>
